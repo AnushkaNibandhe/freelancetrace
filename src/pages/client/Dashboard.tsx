@@ -5,8 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
+import { useClientProjects } from '@/hooks/useProjects';
+import { usePendingMilestones, useApproveMilestone } from '@/hooks/useMilestones';
+import { usePaymentStats } from '@/hooks/usePayments';
 import {
   FolderKanban,
   CreditCard,
@@ -18,47 +22,41 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-// Demo data
-const demoProjects = [
-  {
-    id: '1',
-    title: 'E-commerce Platform Redesign',
-    status: 'in_progress' as const,
-    fulfillment: 72,
-    budget: 15000,
-    freelancer: 'Alex Chen',
-    dueDate: '2024-03-15',
-    drift: 'low',
-  },
-  {
-    id: '2',
-    title: 'Mobile Banking App',
-    status: 'open' as const,
-    fulfillment: 0,
-    budget: 25000,
-    freelancer: null,
-    dueDate: '2024-04-01',
-    drift: 'none',
-  },
-  {
-    id: '3',
-    title: 'CRM Integration API',
-    status: 'completed' as const,
-    fulfillment: 100,
-    budget: 8500,
-    freelancer: 'Sarah Johnson',
-    dueDate: '2024-02-28',
-    drift: 'none',
-  },
-];
-
-const pendingMilestones = [
-  { id: '1', project: 'E-commerce Platform', title: 'Frontend Implementation', amount: 5000, fulfillment: 85 },
-  { id: '2', project: 'Mobile Banking App', title: 'UI/UX Design', amount: 3000, fulfillment: 0 },
-];
-
 const ClientDashboard: React.FC = () => {
   const { profile } = useAuth();
+  const { data: projects, isLoading: loadingProjects } = useClientProjects();
+  const { data: pendingMilestones, isLoading: loadingMilestones } = usePendingMilestones();
+  const { data: paymentStats } = usePaymentStats('client');
+  const approveMilestone = useApproveMilestone();
+
+  const activeProjects = projects?.filter(p => p.status === 'in_progress') || [];
+  const recentProjects = projects?.slice(0, 3) || [];
+
+  if (loadingProjects) {
+    return (
+      <AppLayout>
+        <div className="space-y-8">
+          <div className="flex justify-between">
+            <div>
+              <Skeleton className="h-8 w-64 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-24" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -81,26 +79,24 @@ const ClientDashboard: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Active Projects"
-            value={3}
+            value={activeProjects.length}
             icon={FolderKanban}
-            trend={{ value: 12, isPositive: true }}
           />
           <StatCard
             title="Total Spent"
-            value="$48,500"
+            value={`$${paymentStats?.totalAmount?.toLocaleString() || 0}`}
             icon={CreditCard}
-            description="This year"
+            description="All time"
           />
           <StatCard
             title="Pending Approvals"
-            value={2}
+            value={pendingMilestones?.length || 0}
             icon={Clock}
           />
           <StatCard
-            title="Avg. Trust Score"
-            value="4.8"
+            title="This Month"
+            value={`$${paymentStats?.thisMonthAmount?.toLocaleString() || 0}`}
             icon={TrendingUp}
-            description="Your freelancers"
           />
         </div>
 
@@ -121,33 +117,48 @@ const ClientDashboard: React.FC = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {demoProjects.map((project) => (
-                  <div
-                    key={project.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <ProgressRing progress={project.fulfillment} size={48} strokeWidth={4} showLabel={false} />
-                      <div>
-                        <h4 className="font-medium">{project.title}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <StatusBadge status={project.status} />
-                          {project.freelancer && (
-                            <span className="text-sm text-muted-foreground">
-                              • {project.freelancer}
-                            </span>
+              {recentProjects.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No projects yet. Create your first project!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentProjects.map((project) => {
+                    const requirements = project.requirements || [];
+                    const fulfilled = requirements.filter((r: any) => r.status === 'fulfilled').length;
+                    const total = requirements.length;
+                    const fulfillment = total > 0 ? Math.round((fulfilled / total) * 100) : 0;
+                    
+                    return (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <ProgressRing progress={fulfillment} size={48} strokeWidth={4} showLabel={false} />
+                          <div>
+                            <h4 className="font-medium">{project.title}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <StatusBadge status={project.status || 'draft'} />
+                              {project.freelancer && (
+                                <span className="text-sm text-muted-foreground">
+                                  • {project.freelancer.full_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${project.budget_max?.toLocaleString() || 0}</p>
+                          {project.duration_days && (
+                            <p className="text-sm text-muted-foreground">{project.duration_days} days</p>
                           )}
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">${project.budget.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">Due {project.dueDate}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -161,31 +172,51 @@ const ClientDashboard: React.FC = () => {
               <CardDescription>Milestones awaiting your review</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {pendingMilestones.map((milestone) => (
-                  <div key={milestone.id} className="p-4 rounded-lg border border-border space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{milestone.project}</p>
-                      <h4 className="font-medium">{milestone.title}</h4>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold">${milestone.amount.toLocaleString()}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">{milestone.fulfillment}% complete</span>
+              {loadingMilestones ? (
+                <div className="space-y-4">
+                  {[...Array(2)].map((_, i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
+                </div>
+              ) : pendingMilestones?.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm">No pending approvals</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingMilestones?.map((milestone) => (
+                    <div key={milestone.id} className="p-4 rounded-lg border border-border space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {(milestone as any).contract?.project?.title}
+                        </p>
+                        <h4 className="font-medium">{milestone.title}</h4>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold">${milestone.amount.toLocaleString()}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {milestone.current_fulfillment || 0}% complete
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => approveMilestone.mutate(milestone.id)}
+                          disabled={approveMilestone.isPending}
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1">
+                          Review
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" className="flex-1">
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
-                        Review
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

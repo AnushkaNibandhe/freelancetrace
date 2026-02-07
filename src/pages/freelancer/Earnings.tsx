@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { StatCard } from '@/components/ui/stat-card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useFreelancerPayments, usePaymentStats } from '@/hooks/usePayments';
 import {
   CreditCard,
   Download,
@@ -22,55 +24,6 @@ import {
 } from '@/components/ui/chart';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
-// Demo earnings data
-const earningsData = [
-  { month: 'Sep', amount: 4500 },
-  { month: 'Oct', amount: 6200 },
-  { month: 'Nov', amount: 5800 },
-  { month: 'Dec', amount: 8100 },
-  { month: 'Jan', amount: 7200 },
-  { month: 'Feb', amount: 9500 },
-];
-
-const transactions = [
-  {
-    id: '1',
-    project: 'E-commerce Platform Redesign',
-    milestone: 'UI/UX Design',
-    amount: 3000,
-    status: 'completed' as const,
-    date: '2024-02-10',
-    client: 'TechCorp Inc.',
-  },
-  {
-    id: '2',
-    project: 'CRM Integration API',
-    milestone: 'API Architecture',
-    amount: 2000,
-    status: 'completed' as const,
-    date: '2024-02-05',
-    client: 'SalesForce Pro',
-  },
-  {
-    id: '3',
-    project: 'E-commerce Platform Redesign',
-    milestone: 'Frontend Implementation',
-    amount: 5000,
-    status: 'processing' as const,
-    date: '2024-03-01',
-    client: 'TechCorp Inc.',
-  },
-  {
-    id: '4',
-    project: 'CRM Integration API',
-    milestone: 'Core Endpoints',
-    amount: 3500,
-    status: 'pending' as const,
-    date: null,
-    client: 'SalesForce Pro',
-  },
-];
-
 const chartConfig = {
   amount: {
     label: 'Earnings',
@@ -79,6 +32,59 @@ const chartConfig = {
 };
 
 const FreelancerEarnings: React.FC = () => {
+  const { data: payments, isLoading } = useFreelancerPayments();
+  const { data: stats } = usePaymentStats('freelancer');
+
+  // Generate chart data from payments
+  const chartData = React.useMemo(() => {
+    if (!payments) return [];
+    
+    const monthlyData: Record<string, number> = {};
+    const completedPayments = payments.filter(p => p.status === 'completed' && p.paid_at);
+    
+    completedPayments.forEach(payment => {
+      const date = new Date(payment.paid_at!);
+      const month = date.toLocaleString('default', { month: 'short' });
+      monthlyData[month] = (monthlyData[month] || 0) + payment.net_amount;
+    });
+    
+    return Object.entries(monthlyData).map(([month, amount]) => ({ month, amount }));
+  }, [payments]);
+
+  const filteredPayments = (status?: string) => {
+    if (!status || status === 'all') return payments || [];
+    return payments?.filter(p => p.status === status) || [];
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex justify-between">
+            <div>
+              <Skeleton className="h-8 w-32 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <Skeleton className="h-8 w-24 mb-2" />
+                  <Skeleton className="h-4 w-16" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -104,60 +110,61 @@ const FreelancerEarnings: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Earnings"
-            value="$32,500"
+            value={`$${stats?.totalAmount?.toLocaleString() || 0}`}
             icon={DollarSign}
             description="All time"
           />
           <StatCard
             title="This Month"
-            value="$9,500"
+            value={`$${stats?.thisMonthAmount?.toLocaleString() || 0}`}
             icon={TrendingUp}
-            trend={{ value: 32, isPositive: true }}
           />
           <StatCard
             title="Pending Payouts"
-            value="$8,500"
+            value={`$${stats?.pendingAmount?.toLocaleString() || 0}`}
             icon={Clock}
-            description="2 milestones"
+            description={`${stats?.pendingCount || 0} milestones`}
           />
           <StatCard
             title="Available Balance"
-            value="$5,000"
+            value={`$${(stats?.totalAmount || 0) - (stats?.pendingAmount || 0)}`}
             icon={Wallet}
           />
         </div>
 
         {/* Earnings Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Earnings Overview</CardTitle>
-            <CardDescription>Your earnings over the last 6 months</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={earningsData}>
-                  <defs>
-                    <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="amount"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    fill="url(#colorAmount)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+        {chartData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Earnings Overview</CardTitle>
+              <CardDescription>Your earnings over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                    <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="amount"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      fill="url(#colorAmount)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Payout Settings */}
         <Card>
@@ -173,16 +180,10 @@ const FreelancerEarnings: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-medium">Bank Account</p>
-                  <p className="text-sm text-muted-foreground">HDFC Bank ****4532</p>
+                  <p className="text-sm text-muted-foreground">Configure your bank details</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-success flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Verified
-                </span>
-                <Button variant="outline" size="sm">Change</Button>
-              </div>
+              <Button variant="outline" size="sm">Configure</Button>
             </div>
           </CardContent>
         </Card>
@@ -196,131 +197,62 @@ const FreelancerEarnings: React.FC = () => {
           <CardContent>
             <Tabs defaultValue="all">
               <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="completed">Completed</TabsTrigger>
-                <TabsTrigger value="pending">Pending</TabsTrigger>
-                <TabsTrigger value="processing">Processing</TabsTrigger>
+                <TabsTrigger value="all">All ({payments?.length || 0})</TabsTrigger>
+                <TabsTrigger value="completed">Completed ({filteredPayments('completed').length})</TabsTrigger>
+                <TabsTrigger value="pending">Pending ({filteredPayments('pending').length})</TabsTrigger>
+                <TabsTrigger value="processing">Processing ({filteredPayments('processing').length})</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="all" className="mt-6">
-                <div className="space-y-4">
-                  {transactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          tx.status === 'completed' ? 'bg-success/10' :
-                          tx.status === 'processing' ? 'bg-info/10' : 'bg-muted'
-                        }`}>
-                          {tx.status === 'completed' ? (
-                            <ArrowUpRight className="h-5 w-5 text-success" />
-                          ) : (
-                            <Clock className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{tx.project}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {tx.milestone} • {tx.client}
-                          </p>
-                        </div>
+              {['all', 'completed', 'pending', 'processing'].map((tab) => (
+                <TabsContent key={tab} value={tab} className="mt-6">
+                  <div className="space-y-4">
+                    {filteredPayments(tab === 'all' ? undefined : tab).length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No {tab === 'all' ? '' : tab} transactions</p>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-bold text-success">+${tx.amount.toLocaleString()}</p>
-                          {tx.date && (
-                            <p className="text-xs text-muted-foreground">{tx.date}</p>
-                          )}
-                        </div>
-                        <StatusBadge status={tx.status} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="completed" className="mt-6">
-                <div className="space-y-4">
-                  {transactions
-                    .filter((tx) => tx.status === 'completed')
-                    .map((tx) => (
-                      <div
-                        key={tx.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-                            <ArrowUpRight className="h-5 w-5 text-success" />
+                    ) : (
+                      filteredPayments(tab === 'all' ? undefined : tab).map((payment) => (
+                        <div
+                          key={payment.id}
+                          className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                              payment.status === 'completed' ? 'bg-success/10' :
+                              payment.status === 'processing' ? 'bg-info/10' : 'bg-muted'
+                            }`}>
+                              {payment.status === 'completed' ? (
+                                <ArrowUpRight className="h-5 w-5 text-success" />
+                              ) : (
+                                <Clock className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {(payment as any).milestone?.project?.title || 'Project'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {(payment as any).milestone?.title || 'Milestone'} • {(payment as any).milestone?.project?.client?.full_name || 'Client'}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{tx.project}</p>
-                            <p className="text-sm text-muted-foreground">{tx.milestone}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-success">+${tx.amount.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">{tx.date}</p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="pending" className="mt-6">
-                <div className="space-y-4">
-                  {transactions
-                    .filter((tx) => tx.status === 'pending')
-                    .map((tx) => (
-                      <div
-                        key={tx.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                            <Clock className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{tx.project}</p>
-                            <p className="text-sm text-muted-foreground">{tx.milestone}</p>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="font-bold text-success">+${payment.net_amount.toLocaleString()}</p>
+                              {payment.paid_at && (
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(payment.paid_at).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                            <StatusBadge status={payment.status || 'pending'} />
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <p className="font-bold">${tx.amount.toLocaleString()}</p>
-                          <StatusBadge status={tx.status} />
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="processing" className="mt-6">
-                <div className="space-y-4">
-                  {transactions
-                    .filter((tx) => tx.status === 'processing')
-                    .map((tx) => (
-                      <div
-                        key={tx.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center">
-                            <Clock className="h-5 w-5 text-info" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{tx.project}</p>
-                            <p className="text-sm text-muted-foreground">{tx.milestone}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <p className="font-bold">${tx.amount.toLocaleString()}</p>
-                          <StatusBadge status={tx.status} />
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </TabsContent>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+              ))}
             </Tabs>
           </CardContent>
         </Card>

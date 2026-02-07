@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
+import { useClientProjects, useDeleteProject } from '@/hooks/useProjects';
 import {
   Plus,
   Search,
@@ -27,89 +29,80 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Demo projects data
-const demoProjects = [
-  {
-    id: '1',
-    title: 'E-commerce Platform Redesign',
-    description: 'Complete overhaul of the existing e-commerce platform with modern UI/UX',
-    status: 'in_progress' as const,
-    fulfillment: 72,
-    drift: 5,
-    budget: { min: 12000, max: 15000 },
-    bidsCount: 8,
-    freelancer: { name: 'Alex Chen', avatar: null, trustScore: 4.8 },
-    dueDate: '2024-03-15',
-    techStack: ['React', 'Node.js', 'PostgreSQL'],
-    requirements: { total: 24, fulfilled: 17 },
-    created: '2024-01-10',
-  },
-  {
-    id: '2',
-    title: 'Mobile Banking App',
-    description: 'Native mobile application for iOS and Android with banking features',
-    status: 'open' as const,
-    fulfillment: 0,
-    drift: 0,
-    budget: { min: 20000, max: 25000 },
-    bidsCount: 12,
-    freelancer: null,
-    dueDate: '2024-04-01',
-    techStack: ['React Native', 'Firebase', 'TypeScript'],
-    requirements: { total: 32, fulfilled: 0 },
-    created: '2024-02-01',
-  },
-  {
-    id: '3',
-    title: 'CRM Integration API',
-    description: 'RESTful API for integrating with major CRM platforms',
-    status: 'completed' as const,
-    fulfillment: 100,
-    drift: 0,
-    budget: { min: 8000, max: 8500 },
-    bidsCount: 5,
-    freelancer: { name: 'Sarah Johnson', avatar: null, trustScore: 4.9 },
-    dueDate: '2024-02-28',
-    techStack: ['Python', 'FastAPI', 'Redis'],
-    requirements: { total: 18, fulfilled: 18 },
-    created: '2024-01-05',
-  },
-  {
-    id: '4',
-    title: 'AI Chatbot Development',
-    description: 'Intelligent customer support chatbot with NLP capabilities',
-    status: 'draft' as const,
-    fulfillment: 0,
-    drift: 0,
-    budget: { min: 10000, max: 12000 },
-    bidsCount: 0,
-    freelancer: null,
-    dueDate: null,
-    techStack: ['Python', 'TensorFlow', 'Docker'],
-    requirements: { total: 15, fulfilled: 0 },
-    created: '2024-02-15',
-  },
-];
-
 const ClientProjects: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  
+  const { data: projects, isLoading } = useClientProjects();
+  const deleteProject = useDeleteProject();
 
-  const filteredProjects = demoProjects.filter((project) => {
+  const filteredProjects = projects?.filter((project) => {
     const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === 'all' || project.status === activeTab;
     return matchesSearch && matchesTab;
-  });
+  }) || [];
 
   const getStatusCounts = () => ({
-    all: demoProjects.length,
-    draft: demoProjects.filter((p) => p.status === 'draft').length,
-    open: demoProjects.filter((p) => p.status === 'open').length,
-    in_progress: demoProjects.filter((p) => p.status === 'in_progress').length,
-    completed: demoProjects.filter((p) => p.status === 'completed').length,
+    all: projects?.length || 0,
+    draft: projects?.filter((p) => p.status === 'draft').length || 0,
+    open: projects?.filter((p) => p.status === 'open').length || 0,
+    in_progress: projects?.filter((p) => p.status === 'in_progress').length || 0,
+    completed: projects?.filter((p) => p.status === 'completed').length || 0,
   });
 
   const counts = getStatusCounts();
+
+  const getProjectMetrics = (project: any) => {
+    const requirements = project.requirements || [];
+    const fulfilled = requirements.filter((r: any) => r.status === 'fulfilled').length;
+    const total = requirements.length;
+    const fulfillment = total > 0 ? Math.round((fulfilled / total) * 100) : 0;
+    
+    const avgCoverage = requirements.length > 0
+      ? Math.round(requirements.reduce((sum: number, r: any) => sum + (r.coverage_percentage || 0), 0) / requirements.length)
+      : 0;
+    
+    return { fulfillment, fulfilled, total, avgCoverage };
+  };
+
+  const handleDelete = (projectId: string) => {
+    if (confirm('Are you sure you want to delete this project?')) {
+      deleteProject.mutate(projectId);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex justify-between">
+            <div>
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex gap-6">
+                  <Skeleton className="h-24 w-24 rounded-full" />
+                  <div className="flex-1 space-y-4">
+                    <Skeleton className="h-6 w-1/3" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-6 w-16" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -167,126 +160,136 @@ const ClientProjects: React.FC = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filteredProjects.map((project) => (
-                  <Card key={project.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                        {/* Progress Ring */}
-                        <div className="flex-shrink-0">
-                          <ProgressRing
-                            progress={project.fulfillment}
-                            size={100}
-                            strokeWidth={6}
-                            label="Fulfillment"
-                          />
-                        </div>
-
-                        {/* Project Info */}
-                        <div className="flex-1 min-w-0 space-y-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <div className="flex items-center gap-3">
-                                <h3 className="text-xl font-semibold">{project.title}</h3>
-                                <StatusBadge status={project.status} />
-                              </div>
-                              <p className="text-muted-foreground mt-1 line-clamp-2">
-                                {project.description}
-                              </p>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit Project
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                filteredProjects.map((project) => {
+                  const metrics = getProjectMetrics(project);
+                  const bidsCount = (project.bids as any)?.[0]?.count || 0;
+                  
+                  return (
+                    <Card key={project.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                          {/* Progress Ring */}
+                          <div className="flex-shrink-0">
+                            <ProgressRing
+                              progress={metrics.fulfillment}
+                              size={100}
+                              strokeWidth={6}
+                              label="Fulfillment"
+                            />
                           </div>
 
-                          {/* Tech Stack */}
-                          <div className="flex flex-wrap gap-2">
-                            {project.techStack.map((tech) => (
-                              <span
-                                key={tech}
-                                className="px-2 py-1 text-xs font-medium rounded-md bg-primary/10 text-primary"
-                              >
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* Metrics */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div className="flex items-center gap-2">
-                              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                          {/* Project Info */}
+                          <div className="flex-1 min-w-0 space-y-4">
+                            <div className="flex items-start justify-between gap-4">
                               <div>
-                                <p className="text-sm font-medium">
-                                  {project.requirements.fulfilled}/{project.requirements.total}
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-xl font-semibold">{project.title}</h3>
+                                  <StatusBadge status={project.status || 'draft'} />
+                                </div>
+                                <p className="text-muted-foreground mt-1 line-clamp-2">
+                                  {project.description}
                                 </p>
-                                <p className="text-xs text-muted-foreground">Requirements</p>
                               </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem asChild>
+                                    <Link to={`/client/projects/${project.id}`}>
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      View Details
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Project
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-destructive"
+                                    onClick={() => handleDelete(project.id)}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                            {project.drift > 0 && (
+
+                            {/* Tech Stack */}
+                            <div className="flex flex-wrap gap-2">
+                              {project.tech_stack?.map((tech) => (
+                                <span
+                                  key={tech}
+                                  className="px-2 py-1 text-xs font-medium rounded-md bg-primary/10 text-primary"
+                                >
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Metrics */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                               <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-warning" />
+                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
                                 <div>
-                                  <p className="text-sm font-medium">{project.drift}%</p>
-                                  <p className="text-xs text-muted-foreground">Drift Score</p>
+                                  <p className="text-sm font-medium">
+                                    {metrics.fulfilled}/{metrics.total}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">Requirements</p>
                                 </div>
                               </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <p className="text-sm font-medium">{project.bidsCount}</p>
-                                <p className="text-xs text-muted-foreground">Bids</p>
-                              </div>
-                            </div>
-                            {project.dueDate && (
+                              {metrics.avgCoverage > 0 && metrics.avgCoverage < 50 && (
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-warning" />
+                                  <div>
+                                    <p className="text-sm font-medium">{metrics.avgCoverage}%</p>
+                                    <p className="text-xs text-muted-foreground">Avg Coverage</p>
+                                  </div>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                <Users className="h-4 w-4 text-muted-foreground" />
                                 <div>
-                                  <p className="text-sm font-medium">{project.dueDate}</p>
-                                  <p className="text-xs text-muted-foreground">Due Date</p>
+                                  <p className="text-sm font-medium">{bidsCount}</p>
+                                  <p className="text-xs text-muted-foreground">Bids</p>
                                 </div>
                               </div>
-                            )}
-                          </div>
-
-                          {/* Footer */}
-                          <div className="flex items-center justify-between pt-4 border-t border-border">
-                            <div>
-                              <p className="text-lg font-bold">
-                                ${project.budget.min.toLocaleString()} - ${project.budget.max.toLocaleString()}
-                              </p>
-                              {project.freelancer && (
-                                <p className="text-sm text-muted-foreground">
-                                  Assigned to {project.freelancer.name} (★ {project.freelancer.trustScore})
-                                </p>
+                              {project.duration_days && (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm font-medium">{project.duration_days} days</p>
+                                    <p className="text-xs text-muted-foreground">Duration</p>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <Button variant="outline" asChild>
-                              <Link to={`/client/projects/${project.id}`}>View Project</Link>
-                            </Button>
+
+                            {/* Footer */}
+                            <div className="flex items-center justify-between pt-4 border-t border-border">
+                              <div>
+                                <p className="text-lg font-bold">
+                                  ${project.budget_min?.toLocaleString() || 0} - ${project.budget_max?.toLocaleString() || 0}
+                                </p>
+                                {project.freelancer && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Assigned to {project.freelancer.full_name} (★ {project.freelancer.trust_score})
+                                  </p>
+                                )}
+                              </div>
+                              <Button variant="outline" asChild>
+                                <Link to={`/client/projects/${project.id}`}>View Project</Link>
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </div>
           </TabsContent>
