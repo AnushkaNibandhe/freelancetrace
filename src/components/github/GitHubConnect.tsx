@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLinkRepository, useProjectRepository } from '@/hooks/useGitHub';
-import { GitBranch, ExternalLink, Loader2, CheckCircle2 } from 'lucide-react';
+import { useLinkRepository, useProjectRepository, useSyncCommits } from '@/hooks/useGitHub';
+import { GitBranch, ExternalLink, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ export const GitHubConnect: React.FC<GitHubConnectProps> = ({ projectId }) => {
   
   const { data: repository, isLoading: loadingRepo } = useProjectRepository(projectId);
   const linkRepo = useLinkRepository();
+  const syncCommits = useSyncCommits();
 
   const handleConnect = () => {
     if (!repoUrl.trim()) return;
@@ -70,12 +71,23 @@ export const GitHubConnect: React.FC<GitHubConnectProps> = ({ projectId }) => {
                 )}
               </p>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <a href={repository.repo_url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open
-              </a>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncCommits.mutate(projectId)}
+                disabled={syncCommits.isPending}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${syncCommits.isPending ? 'animate-spin' : ''}`} />
+                {syncCommits.isPending ? 'Syncing...' : 'Sync Commits'}
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href={repository.repo_url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open
+                </a>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
