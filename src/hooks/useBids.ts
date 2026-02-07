@@ -104,6 +104,25 @@ export const useAcceptBid = () => {
   
   return useMutation({
     mutationFn: async ({ bidId, projectId }: { bidId: string; projectId: string }) => {
+      // Validate current state before acting
+      const { data: freshBid, error: fetchBidError } = await supabase
+        .from('bids')
+        .select('id, status, freelancer_id, amount, project_id')
+        .eq('id', bidId)
+        .single();
+      
+      if (fetchBidError || !freshBid) throw new Error('Bid not found');
+      if (freshBid.status !== 'pending') throw new Error('Bid is no longer pending');
+
+      const { data: freshProject, error: fetchProjectError } = await supabase
+        .from('projects')
+        .select('id, status')
+        .eq('id', projectId)
+        .single();
+      
+      if (fetchProjectError || !freshProject) throw new Error('Project not found');
+      if (freshProject.status !== 'open') throw new Error('Project is no longer open for bids');
+
       // Update bid status to accepted
       const { data: bid, error: bidError } = await supabase
         .from('bids')
@@ -114,11 +133,12 @@ export const useAcceptBid = () => {
       
       if (bidError) throw bidError;
       
-      // Reject all other bids for this project
+      // Reject all other pending bids for this project
       await supabase
         .from('bids')
         .update({ status: 'rejected' })
         .eq('project_id', projectId)
+        .eq('status', 'pending')
         .neq('id', bidId);
       
       // Update project with awarded freelancer
