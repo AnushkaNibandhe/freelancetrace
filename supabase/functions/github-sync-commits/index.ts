@@ -43,9 +43,16 @@ serve(async (req) => {
     const githubUrl = `https://api.github.com/repos/${repo.owner}/${repo.repo_name}/commits?per_page=50`;
     console.log('Fetching commits from:', githubUrl);
 
-    const ghResponse = await fetch(githubUrl, {
-      headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'FreelanceTrace' },
-    });
+    const githubToken = Deno.env.get('GITHUB_TOKEN');
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'FreelanceTrace',
+    };
+    if (githubToken) {
+      headers['Authorization'] = `Bearer ${githubToken}`;
+    }
+
+    const ghResponse = await fetch(githubUrl, { headers });
 
     if (!ghResponse.ok) {
       const errorText = await ghResponse.text();
