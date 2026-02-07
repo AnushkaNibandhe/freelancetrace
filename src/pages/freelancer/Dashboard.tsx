@@ -197,7 +197,7 @@ const FreelancerDashboard: React.FC = () => {
                 ) : (
                   <div className="space-y-3">
                     {activeProjects.slice(0, 2).map((project) => {
-                      const repo = project.github_repositories?.[0];
+                      const repo = Array.isArray(project.github_repositories) ? project.github_repositories[0] : project.github_repositories;
                       return (
                         <div key={project.id} className="p-3 rounded-lg border border-border">
                           <p className="text-sm font-medium truncate">{project.title}</p>
