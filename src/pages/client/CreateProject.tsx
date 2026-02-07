@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { useCreateProject, useUploadSRS } from '@/hooks/useProjects';
 import {
   FileText,
   Upload,
@@ -32,9 +32,9 @@ const domainOptions = [
 
 const CreateProject: React.FC = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [step, setStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const createProject = useCreateProject();
+  const uploadSRS = useUploadSRS();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -79,29 +79,49 @@ const CreateProject: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setFormData((prev) => ({ ...prev, srsFile: file }));
-      // Simulate SRS parsing
-      toast({
-        title: 'SRS Uploaded',
-        description: 'Document will be analyzed for requirements extraction.',
-      });
     }
   };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    toast({
-      title: 'Project Created!',
-      description: 'Your project is now live and accepting bids.',
-    });
-    navigate('/client/projects');
+    let srsUrl: string | undefined;
+    
+    // Upload SRS file if exists
+    if (formData.srsFile) {
+      try {
+        srsUrl = await uploadSRS.mutateAsync(formData.srsFile);
+      } catch (error) {
+        console.error('SRS upload failed:', error);
+      }
+    }
+
+    // Create project with requirements
+    createProject.mutate(
+      {
+        project: {
+          title: formData.title,
+          description: formData.description,
+          domain: formData.domain,
+          tech_stack: formData.techStack,
+          budget_min: parseInt(formData.budgetMin),
+          budget_max: parseInt(formData.budgetMax),
+          duration_days: formData.durationDays ? parseInt(formData.durationDays) : undefined,
+          visibility: formData.visibility,
+          srs_file_url: srsUrl,
+        },
+        requirements,
+      },
+      {
+        onSuccess: () => {
+          navigate('/client/projects');
+        },
+      }
+    );
   };
 
   const isStep1Valid = formData.title && formData.description && formData.domain;
   const isStep2Valid = formData.techStack.length > 0 && formData.budgetMin && formData.budgetMax;
   const isStep3Valid = requirements.length > 0 || formData.srsFile;
+  const isSubmitting = createProject.isPending || uploadSRS.isPending;
 
   return (
     <AppLayout>
@@ -437,17 +457,8 @@ const CreateProject: React.FC = () => {
                   Back
                 </Button>
                 <Button onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      Post Project
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSubmitting ? 'Creating...' : 'Create Project'}
                 </Button>
               </div>
             </CardContent>

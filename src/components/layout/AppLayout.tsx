@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadCount } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -12,12 +13,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   LayoutDashboard,
   Briefcase,
   FolderKanban,
   Users,
   FileText,
-  MessageSquare,
   Settings,
   LogOut,
   Bell,
@@ -29,6 +34,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { NotificationPanel } from '@/components/notifications/NotificationPanel';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -60,6 +66,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: unreadCount } = useUnreadCount();
 
   const navItems = profile?.role === 'client'
     ? clientNavItems
@@ -158,12 +165,21 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <div className="flex-1" />
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-xs text-destructive-foreground flex items-center justify-center">
-                3
-              </span>
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-xs text-destructive-foreground flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="end">
+                <NotificationPanel />
+              </PopoverContent>
+            </Popover>
 
             {/* User Menu */}
             <DropdownMenu>

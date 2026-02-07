@@ -5,8 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
+import { useFreelancerProjects } from '@/hooks/useProjects';
+import { usePaymentStats } from '@/hooks/usePayments';
+import { useProjectCommits } from '@/hooks/useGitHub';
 import {
   Briefcase,
   CreditCard,
@@ -19,45 +23,38 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-// Demo data
-const demoActiveProjects = [
-  {
-    id: '1',
-    title: 'E-commerce Platform Redesign',
-    client: 'TechCorp Inc.',
-    status: 'in_progress' as const,
-    fulfillment: 72,
-    currentMilestone: 'Frontend Implementation',
-    milestoneProgress: 85,
-    dueDate: '2024-03-15',
-    amount: 15000,
-  },
-  {
-    id: '2',
-    title: 'CRM Integration API',
-    client: 'SalesForce Pro',
-    status: 'in_progress' as const,
-    fulfillment: 45,
-    currentMilestone: 'API Development',
-    milestoneProgress: 60,
-    dueDate: '2024-03-20',
-    amount: 8500,
-  },
-];
-
-const pendingFeedback = [
-  { id: '1', project: 'E-commerce Platform', requirement: 'API response time', type: 'Issue' },
-  { id: '2', project: 'CRM Integration', requirement: 'Authentication flow', type: 'Feedback' },
-];
-
-const recentCommits = [
-  { hash: 'a1b2c3d', message: 'Implement product listing API', time: '2 hours ago', coverage: 3 },
-  { hash: 'e4f5g6h', message: 'Add user authentication middleware', time: '5 hours ago', coverage: 2 },
-  { hash: 'i7j8k9l', message: 'Fix cart calculation bug', time: '1 day ago', coverage: 1 },
-];
-
 const FreelancerDashboard: React.FC = () => {
   const { profile } = useAuth();
+  const { data: projects, isLoading } = useFreelancerProjects();
+  const { data: paymentStats } = usePaymentStats('freelancer');
+
+  const activeProjects = projects?.filter(p => p.status === 'in_progress') || [];
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="space-y-8">
+          <div className="flex justify-between">
+            <div>
+              <Skeleton className="h-8 w-64 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <Skeleton className="h-10 w-36" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-24" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -80,24 +77,23 @@ const FreelancerDashboard: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Active Projects"
-            value={2}
+            value={activeProjects.length}
             icon={Briefcase}
           />
           <StatCard
             title="Total Earnings"
-            value="$32,500"
+            value={`$${paymentStats?.totalAmount?.toLocaleString() || 0}`}
             icon={CreditCard}
-            trend={{ value: 18, isPositive: true }}
           />
           <StatCard
             title="Trust Score"
-            value="4.8"
+            value={profile?.trust_score || 0}
             icon={Star}
-            description="Based on 12 projects"
+            description={`Based on ${profile?.projects_completed || 0} projects`}
           />
           <StatCard
             title="Pending Payouts"
-            value="$5,000"
+            value={`$${paymentStats?.pendingAmount?.toLocaleString() || 0}`}
             icon={TrendingUp}
           />
         </div>
@@ -119,107 +115,128 @@ const FreelancerDashboard: React.FC = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {demoActiveProjects.map((project) => (
-                  <div key={project.id} className="p-4 rounded-lg border border-border">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold">{project.title}</h4>
-                          <StatusBadge status={project.status} />
+              {activeProjects.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No active projects. Browse and bid on projects!</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {activeProjects.slice(0, 3).map((project) => {
+                    const requirements = project.requirements || [];
+                    const fulfilled = requirements.filter((r: any) => r.status === 'fulfilled').length;
+                    const total = requirements.length;
+                    const fulfillment = total > 0 ? Math.round((fulfilled / total) * 100) : 0;
+                    
+                    return (
+                      <div key={project.id} className="p-4 rounded-lg border border-border">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold">{project.title}</h4>
+                              <StatusBadge status={project.status || 'in_progress'} />
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              {project.client?.organization_name || project.client?.full_name}
+                            </p>
+                            
+                            {/* Progress */}
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium">Progress</span>
+                                <span className="text-sm text-muted-foreground">{fulfillment}%</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all"
+                                  style={{ width: `${fulfillment}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <ProgressRing progress={fulfillment} size={80} strokeWidth={6} label="Overall" />
                         </div>
-                        <p className="text-sm text-muted-foreground mb-4">{project.client}</p>
-                        
-                        {/* Current Milestone */}
-                        <div className="p-3 rounded-lg bg-muted/50">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium">{project.currentMilestone}</span>
-                            <span className="text-sm text-muted-foreground">{project.milestoneProgress}%</span>
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {project.duration_days && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                {project.duration_days} days
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <CreditCard className="h-4 w-4" />
+                              ${project.budget_max?.toLocaleString() || 0}
+                            </span>
                           </div>
-                          <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full bg-primary rounded-full transition-all"
-                              style={{ width: `${project.milestoneProgress}%` }}
-                            />
-                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to={`/freelancer/projects/${project.id}`}>View Details</Link>
+                          </Button>
                         </div>
                       </div>
-                      <ProgressRing progress={project.fulfillment} size={80} strokeWidth={6} label="Overall" />
-                    </div>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          Due {project.dueDate}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <CreditCard className="h-4 w-4" />
-                          ${project.amount.toLocaleString()}
-                        </span>
-                      </div>
-                      <Button variant="outline" size="sm">View Details</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Right Sidebar */}
           <div className="space-y-6">
-            {/* Pending Feedback */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-warning" />
-                  Action Required
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {pendingFeedback.map((item) => (
-                    <div key={item.id} className="p-3 rounded-lg border border-border">
-                      <p className="text-sm font-medium">{item.requirement}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {item.project} • {item.type}
-                      </p>
-                      <Button variant="link" size="sm" className="p-0 h-auto mt-2">
-                        Address Now →
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Commits */}
+            {/* GitHub Info */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <GitBranch className="h-5 w-5" />
-                  Recent Commits
+                  Repository Status
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recentCommits.map((commit) => (
-                    <div key={commit.hash} className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-mono text-primary">
-                        {commit.hash.slice(0, 4)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{commit.message}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                          <span>{commit.time}</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 text-success" />
-                            {commit.coverage} requirements
-                          </span>
+                {activeProjects.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No active projects</p>
+                ) : (
+                  <div className="space-y-3">
+                    {activeProjects.slice(0, 2).map((project) => {
+                      const repo = project.github_repositories?.[0];
+                      return (
+                        <div key={project.id} className="p-3 rounded-lg border border-border">
+                          <p className="text-sm font-medium truncate">{project.title}</p>
+                          {repo ? (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3 text-success" />
+                              {repo.owner}/{repo.repo_name}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3 text-warning" />
+                              No repository linked
+                            </p>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Projects Completed</span>
+                  <span className="font-medium">{profile?.projects_completed || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Dispute Rate</span>
+                  <span className="font-medium">{profile?.dispute_rate || 0}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total Earnings</span>
+                  <span className="font-medium">${profile?.total_earnings || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -254,7 +271,7 @@ const FreelancerDashboard: React.FC = () => {
               <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
                 <Link to="/settings">
                   <GitBranch className="h-6 w-6" />
-                  <span>Link GitHub</span>
+                  <span>Settings</span>
                 </Link>
               </Button>
             </div>
