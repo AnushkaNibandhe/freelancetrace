@@ -47,6 +47,7 @@ export const useUpdateProfile = () => {
   
   return useMutation({
     mutationFn: async (updates: Partial<{
+      id: string;
       full_name: string;
       bio: string;
       skills: string[];
@@ -55,19 +56,25 @@ export const useUpdateProfile = () => {
       github_username: string;
       portfolio_url: string;
       organization_name: string;
+      is_suspended: boolean;
+      is_verified: boolean;
     }>) => {
+      const userId = updates.id || user!.id;
+      const { id, ...updateData } = updates;
+      
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user!.id)
+        .update(updateData)
+        .eq('id', userId)
         .select()
         .single();
       
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['profile', data.id] });
       toast({
         title: 'Profile Updated',
         description: 'Your changes have been saved.',

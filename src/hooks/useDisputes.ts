@@ -77,6 +77,43 @@ export const useDispute = (disputeId: string) => {
   });
 };
 
+export const useUpdateDispute = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (updates: { 
+      id: string; 
+      status?: 'open' | 'under_review' | 'resolved';
+      resolution?: string;
+      resolved_by?: string;
+      resolved_at?: string;
+    }) => {
+      const { id, ...updateData } = updates;
+      const { data, error } = await supabase
+        .from('disputes')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['disputes'] });
+      queryClient.invalidateQueries({ queryKey: ['user-disputes'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
 export const useResolveDispute = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();

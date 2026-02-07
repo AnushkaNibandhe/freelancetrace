@@ -3,6 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+// Admin: get all payments
+export const usePayments = () => {
+  return useQuery({
+    queryKey: ['all-payments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select(`
+          *,
+          milestone:milestones(title, project:projects(title)),
+          payer:profiles!payments_payer_id_fkey(full_name),
+          payee:profiles!payments_payee_id_fkey(full_name)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+};
+
 export const useClientPayments = () => {
   const { user } = useAuth();
   
