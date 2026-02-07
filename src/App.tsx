@@ -13,12 +13,14 @@ import ClientDashboard from "./pages/client/Dashboard";
 import ClientProjects from "./pages/client/Projects";
 import CreateProject from "./pages/client/CreateProject";
 import ClientPayments from "./pages/client/Payments";
+import ClientProjectDetail from "./pages/client/ProjectDetail";
 
 // Freelancer pages
 import FreelancerDashboard from "./pages/freelancer/Dashboard";
 import FreelancerBrowse from "./pages/freelancer/Browse";
 import FreelancerMyProjects from "./pages/freelancer/MyProjects";
 import FreelancerEarnings from "./pages/freelancer/Earnings";
+import FreelancerProjectDetail from "./pages/freelancer/ProjectDetail";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -55,6 +57,7 @@ const AppRoutes = () => {
       {/* Client Routes */}
       <Route path="/client/dashboard" element={<ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>} />
       <Route path="/client/projects" element={<ProtectedRoute allowedRoles={['client']}><ClientProjects /></ProtectedRoute>} />
+      <Route path="/client/projects/:id" element={<ProtectedRoute allowedRoles={['client']}><ClientProjectDetail /></ProtectedRoute>} />
       <Route path="/client/create-project" element={<ProtectedRoute allowedRoles={['client']}><CreateProject /></ProtectedRoute>} />
       <Route path="/client/payments" element={<ProtectedRoute allowedRoles={['client']}><ClientPayments /></ProtectedRoute>} />
 
@@ -62,6 +65,7 @@ const AppRoutes = () => {
       <Route path="/freelancer/dashboard" element={<ProtectedRoute allowedRoles={['freelancer']}><FreelancerDashboard /></ProtectedRoute>} />
       <Route path="/freelancer/browse" element={<ProtectedRoute allowedRoles={['freelancer']}><FreelancerBrowse /></ProtectedRoute>} />
       <Route path="/freelancer/my-projects" element={<ProtectedRoute allowedRoles={['freelancer']}><FreelancerMyProjects /></ProtectedRoute>} />
+      <Route path="/freelancer/projects/:id" element={<ProtectedRoute allowedRoles={['freelancer']}><FreelancerProjectDetail /></ProtectedRoute>} />
       <Route path="/freelancer/earnings" element={<ProtectedRoute allowedRoles={['freelancer']}><FreelancerEarnings /></ProtectedRoute>} />
 
       {/* Admin Routes */}
