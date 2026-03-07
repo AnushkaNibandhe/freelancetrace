@@ -13,8 +13,8 @@ import {
   Code,
   FileText,
   Users,
-  CreditCard,
-} from 'lucide-react';
+  CreditCard } from
+'lucide-react';
 
 const Index: React.FC = () => {
   const { user, profile } = useAuth();
@@ -22,10 +22,10 @@ const Index: React.FC = () => {
 
   const handleGetStarted = () => {
     if (user && profile) {
-      const dashboardPath = 
-        profile.role === 'admin' ? '/admin/dashboard' :
-        profile.role === 'client' ? '/client/dashboard' :
-        '/freelancer/dashboard';
+      const dashboardPath =
+      profile.role === 'admin' ? '/admin/dashboard' :
+      profile.role === 'client' ? '/client/dashboard' :
+      '/freelancer/dashboard';
       navigate(dashboardPath);
     } else {
       navigate('/auth');
@@ -33,41 +33,41 @@ const Index: React.FC = () => {
   };
 
   const features = [
-    {
-      icon: FileText,
-      title: 'SRS-Driven Tracking',
-      description: 'Upload your Software Requirements Specification and automatically track fulfillment against every commit.',
-    },
-    {
-      icon: GitBranch,
-      title: 'GitHub Integration',
-      description: 'Connect repositories and get real-time traceability between requirements and code changes.',
-    },
-    {
-      icon: BarChart3,
-      title: 'Progress Analytics',
-      description: 'View objective metrics: fulfillment scores, drift detection, delay risk, and compliance readiness.',
-    },
-    {
-      icon: Shield,
-      title: 'Dispute Prevention',
-      description: 'Evidence-backed milestones reduce disputes by 95%. Pay with confidence based on actual progress.',
-    },
-  ];
+  {
+    icon: FileText,
+    title: 'SRS-Driven Tracking',
+    description: 'Upload your Software Requirements Specification and automatically track fulfillment against every commit.'
+  },
+  {
+    icon: GitBranch,
+    title: 'GitHub Integration',
+    description: 'Connect repositories and get real-time traceability between requirements and code changes.'
+  },
+  {
+    icon: BarChart3,
+    title: 'Progress Analytics',
+    description: 'View objective metrics: fulfillment scores, drift detection, delay risk, and compliance readiness.'
+  },
+  {
+    icon: Shield,
+    title: 'Dispute Prevention',
+    description: 'Evidence-backed milestones reduce disputes by 95%. Pay with confidence based on actual progress.'
+  }];
+
 
   const stats = [
-    { value: '10,000+', label: 'Projects Tracked' },
-    { value: '95%', label: 'Dispute Reduction' },
-    { value: '$2.5M+', label: 'Paid to Freelancers' },
-    { value: '4.9/5', label: 'Average Rating' },
-  ];
+  { value: '10,000+', label: 'Projects Tracked' },
+  { value: '95%', label: 'Dispute Reduction' },
+  { value: '$2.5M+', label: 'Paid to Freelancers' },
+  { value: '4.9/5', label: 'Average Rating' }];
+
 
   const workflowSteps = [
-    { icon: FileText, title: 'Upload SRS', description: 'Client uploads project requirements' },
-    { icon: Users, title: 'Get Bids', description: 'Freelancers submit proposals with milestones' },
-    { icon: Code, title: 'Track Progress', description: 'Commits linked to requirements in real-time' },
-    { icon: CreditCard, title: 'Pay Securely', description: 'Evidence-backed milestone approvals' },
-  ];
+  { icon: FileText, title: 'Upload SRS', description: 'Client uploads project requirements' },
+  { icon: Users, title: 'Get Bids', description: 'Freelancers submit proposals with milestones' },
+  { icon: Code, title: 'Track Progress', description: 'Commits linked to requirements in real-time' },
+  { icon: CreditCard, title: 'Pay Securely', description: 'Evidence-backed milestone approvals' }];
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,19 +75,19 @@ const Index: React.FC = () => {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center text-muted bg-primary border-primary">
               <GitBranch className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold gradient-text">FreelanceTrace</span>
+            <span className="text-xl font-bold gradient-text text-primary">FreelanceTrace</span>
           </Link>
           <div className="flex items-center gap-4">
-            {user ? (
-              <Button onClick={handleGetStarted}>
+            {user ?
+            <Button onClick={handleGetStarted}>
                 Go to Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <>
+              </Button> :
+
+            <>
                 <Button variant="ghost" asChild>
                   <Link to="/auth">Sign In</Link>
                 </Button>
@@ -95,7 +95,7 @@ const Index: React.FC = () => {
                   <Link to="/auth">Get Started</Link>
                 </Button>
               </>
-            )}
+            }
           </div>
         </div>
       </header>
@@ -134,12 +134,12 @@ const Index: React.FC = () => {
       <section className="py-12 border-y border-border bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
+            {stats.map((stat) =>
+            <div key={stat.label} className="text-center">
                 <p className="text-3xl md:text-4xl font-bold gradient-text">{stat.value}</p>
                 <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -157,8 +157,8 @@ const Index: React.FC = () => {
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature) => (
-              <Card key={feature.title} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            {features.map((feature) =>
+            <Card key={feature.title} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6 space-y-4">
                   <div className="h-12 w-12 rounded-xl gradient-primary flex items-center justify-center">
                     <feature.icon className="h-6 w-6 text-white" />
@@ -167,7 +167,7 @@ const Index: React.FC = () => {
                   <p className="text-muted-foreground">{feature.description}</p>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -180,17 +180,17 @@ const Index: React.FC = () => {
             <p className="text-xl text-muted-foreground">Four simple steps to evidence-backed collaboration</p>
           </div>
           <div className="grid md:grid-cols-4 gap-8">
-            {workflowSteps.map((step, index) => (
-              <div key={step.title} className="relative text-center">
+            {workflowSteps.map((step, index) =>
+            <div key={step.title} className="relative text-center">
                 <div className="h-16 w-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
                   <step.icon className="h-8 w-8 text-white" />
                 </div>
-                <div className="absolute top-8 left-[60%] hidden md:block w-[80%] h-0.5 bg-border last:hidden" 
-                  style={{ display: index === 3 ? 'none' : undefined }} />
+                <div className="absolute top-8 left-[60%] hidden md:block w-[80%] h-0.5 bg-border last:hidden"
+              style={{ display: index === 3 ? 'none' : undefined }} />
                 <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
                 <p className="text-sm text-muted-foreground">{step.description}</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -247,8 +247,8 @@ const Index: React.FC = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
