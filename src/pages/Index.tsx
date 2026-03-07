@@ -111,7 +111,7 @@ const Index: React.FC = () => {
             </div>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
               Connect Requirements to Code.{' '}
-              <span className="gradient-text">Pay with Confidence.</span>
+              <span className="gradient-text text-primary">Pay with Confidence.</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               FreelanceTrace bridges the gap between what's promised and what's delivered. 
