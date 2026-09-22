@@ -1,0 +1,30 @@
+# FreelanceTrace – NLP Layer Python dependencies
+# Install with:  pip install -r requirements_nlp.txt
+# Then download the spaCy model:  python -m spacy download en_core_web_sm
+
+# ── NLP core ───────────────────────────────────────────────
+spacy>=3.7,<4.0
+sentence-transformers>=2.6,<3.0
+keybert>=0.8,<1.0
+transformers>=4.38,<5.0
+torch>=2.1
+
+# ── Document parsing ───────────────────────────────────────
+pdfplumber>=0.10,<1.0
+python-docx>=1.1,<2.0
+
+# ── Numerics ───────────────────────────────────────────────
+numpy>=1.26,<2.0
+scikit-learn>=1.4
+
+# ── Web framework (existing) ───────────────────────────────
+flask>=3.0
+flask-cors>=4.0
+
+# ── Database (existing) ────────────────────────────────────
+sqlalchemy>=2.0
+psycopg2-binary>=2.9
+
+# ── Utilities ──────────────────────────────────────────────
+python-dotenv>=1.0
+requests>=2.31

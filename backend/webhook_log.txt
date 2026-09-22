@@ -1,0 +1,8 @@
+Received webhook: {'repository': {'full_name': 'anushka/ecommerce'}, 'commits': [{'id': 'h123', 'message': 'Implement user login logic with email validation', 'author': {'name': 'Mohit'}}]}
+Received webhook: {'repository': {'full_name': 'anushka/ecommerce'}, 'commits': [{'id': 'h123', 'message': 'Implement user login logic with email validation', 'author': {'name': 'Mohit'}}]}
+Error in webhook: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_commits_commit_hash"
+DETAIL:  Key (commit_hash)=(h123) already exists.
+
+[SQL: INSERT INTO commits (project_id, commit_hash, message, author, timestamp) VALUES (%(project_id)s, %(commit_hash)s, %(message)s, %(author)s, %(timestamp)s) RETURNING commits.id]
+[parameters: {'project_id': 1, 'commit_hash': 'h123', 'message': 'Implement user login logic with email validation', 'author': 'Mohit', 'timestamp': datetime.datetime(2026, 3, 12, 19, 15, 14, 233684, tzinfo=datetime.timezone.utc)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)

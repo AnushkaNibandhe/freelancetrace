@@ -1,0 +1,2 @@
+The system shall allow users to login with email.
+The system must support a shopping cart feature.
